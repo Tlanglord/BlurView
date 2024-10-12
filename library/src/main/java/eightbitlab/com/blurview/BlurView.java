@@ -8,6 +8,7 @@ import android.graphics.Canvas;
 import android.os.Build;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
@@ -86,7 +87,7 @@ public class BlurView extends FrameLayout {
      * @param algorithm sets the blur algorithm
      * @return {@link BlurView} to setup needed params.
      */
-    public BlurViewFacade setupWith(@NonNull ViewGroup rootView, BlurAlgorithm algorithm) {
+    public BlurViewFacade setupWith(@NonNull View rootView, BlurAlgorithm algorithm) {
         this.blurController.destroy();
         BlurController blurController = new PreDrawBlurController(this, rootView, overlayColor, algorithm);
         this.blurController = blurController;

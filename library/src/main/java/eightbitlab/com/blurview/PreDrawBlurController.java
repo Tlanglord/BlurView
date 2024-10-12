@@ -3,7 +3,15 @@ package eightbitlab.com.blurview;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
+import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Log;
+import android.view.PixelCopy;
+import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
@@ -25,6 +33,8 @@ import androidx.annotation.Nullable;
  */
 public final class PreDrawBlurController implements BlurController {
 
+    private static final String TAG = "PreDrawBlurController";
+
     @ColorInt
     public static final int TRANSPARENT = 0;
 
@@ -37,18 +47,43 @@ public final class PreDrawBlurController implements BlurController {
     @SuppressWarnings("WeakerAccess")
     final View blurView;
     private int overlayColor;
-    private final ViewGroup rootView;
+    private final View rootView;
     private final int[] rootLocation = new int[2];
     private final int[] blurViewLocation = new int[2];
 
     private final ViewTreeObserver.OnPreDrawListener drawListener = new ViewTreeObserver.OnPreDrawListener() {
         @Override
         public boolean onPreDraw() {
+
+//            Log.d(TAG, "onPreDraw: start");
             // Not invalidating a View here, just updating the Bitmap.
             // This relies on the HW accelerated bitmap drawing behavior in Android
             // If the bitmap was drawn on HW accelerated canvas, it holds a reference to it and on next
             // drawing pass the updated content of the bitmap will be rendered on the screen
-            updateBlur();
+
+            boolean hasSurface = hasSurfaceView();
+
+            if (hasSurface) {
+                long nowTime = System.currentTimeMillis();
+                long cost = nowTime - lockTime;
+                Log.d(TAG, "onPreDraw: cost = " + cost + "ms");
+                if (cost > 60) {
+                    updateBlur();
+                } else {
+                    long delay = 60 - cost;
+                    handler.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            Log.d(TAG, "onPreDraw: delay = " + delay + "ms");
+                            updateBlur();
+                        }
+                    }, delay);
+                }
+            } else {
+                updateBlur();
+            }
+
+//            Log.d(TAG, "onPreDraw: end");
             return true;
         }
     };
@@ -59,13 +94,15 @@ public final class PreDrawBlurController implements BlurController {
     @Nullable
     private Drawable frameClearDrawable;
 
+    private SurfaceView surfaceView;
+
     /**
      * @param blurView  View which will draw it's blurred underlying content
      * @param rootView  Root View where blurView's underlying content starts drawing.
      *                  Can be Activity's root content layout (android.R.id.content)
      * @param algorithm sets the blur algorithm
      */
-    public PreDrawBlurController(@NonNull View blurView, @NonNull ViewGroup rootView, @ColorInt int overlayColor, BlurAlgorithm algorithm) {
+    public PreDrawBlurController(@NonNull View blurView, @NonNull View rootView, @ColorInt int overlayColor, BlurAlgorithm algorithm) {
         this.rootView = rootView;
         this.blurView = blurView;
         this.overlayColor = overlayColor;
@@ -78,7 +115,70 @@ public final class PreDrawBlurController implements BlurController {
         int measuredWidth = blurView.getMeasuredWidth();
         int measuredHeight = blurView.getMeasuredHeight();
 
+        surfaceView = findSurfaceView(rootView);
+
+        if (hasSurfaceView()) {
+            startLooper();
+        }
+
+        Log.d(TAG, "PreDrawBlurController: measuredWidth = " + measuredWidth + ", measuredHeight = " + measuredHeight);
+
         init(measuredWidth, measuredHeight);
+    }
+
+
+    private Handler handler = new Handler(Looper.getMainLooper());
+    private boolean looperStarted = false;
+
+
+    private void startLooper() {
+        looperStarted = true;
+
+//        blurView.postInvalidate();
+
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+
+                Log.d(TAG, "startLooper: run , looperStarted=" + looperStarted);
+
+                if (!looperStarted) {
+                    return;
+                }
+
+
+                updateBlur();
+                handler.postDelayed(this, 100);
+            }
+        }, 1000);
+
+    }
+
+    private boolean hasSurfaceView() {
+        return surfaceView != null;
+    }
+
+    private SurfaceView findSurfaceView(View rootView) {
+        if (rootView instanceof SurfaceView) {
+            return (SurfaceView) rootView;
+        }
+
+        if (rootView instanceof ViewGroup) {
+            ViewGroup viewGroup = (ViewGroup) rootView;
+            for (int i = 0; i < viewGroup.getChildCount(); i++) {
+                View child = viewGroup.getChildAt(i);
+                if (child instanceof SurfaceView) {
+                    return (SurfaceView) child;
+                } else if (child instanceof ViewGroup) {
+                    SurfaceView surfaceView = findSurfaceView(child);
+                    if (surfaceView != null) {
+                        return surfaceView;
+                    }
+                }
+            }
+        }
+
+        return null;
     }
 
     @SuppressWarnings("WeakerAccess")
@@ -91,8 +191,10 @@ public final class PreDrawBlurController implements BlurController {
             return;
         }
 
+
         blurView.setWillNotDraw(false);
         SizeScaler.Size bitmapSize = sizeScaler.scale(measuredWidth, measuredHeight);
+        Log.d(TAG, "init: bitmapSize = " + bitmapSize.width + ", " + bitmapSize.height);
         internalBitmap = Bitmap.createBitmap(bitmapSize.width, bitmapSize.height, blurAlgorithm.getSupportedBitmapConfig());
         internalCanvas = new BlurViewCanvas(internalBitmap);
         initialized = true;
@@ -103,24 +205,107 @@ public final class PreDrawBlurController implements BlurController {
         updateBlur();
     }
 
+    Paint paint = new Paint();
+
+    {
+        paint.setStyle(Paint.Style.FILL);
+        paint.setColor(Color.RED);
+        paint.setAntiAlias(true);
+//        paint.setStrokeWidth(20);
+        paint.setTextSize(20);
+        paint.setFilterBitmap(true);
+    }
+
     @SuppressWarnings("WeakerAccess")
     void updateBlur() {
+
+
         if (!blurEnabled || !initialized) {
             return;
         }
 
         if (frameClearDrawable == null) {
-            internalBitmap.eraseColor(Color.TRANSPARENT);
+//            internalBitmap.eraseColor(Color.TRANSPARENT);
         } else {
-            frameClearDrawable.draw(internalCanvas);
+//            frameClearDrawable.draw(internalCanvas);
         }
 
-        internalCanvas.save();
-        setupInternalCanvasMatrix();
-        rootView.draw(internalCanvas);
-        internalCanvas.restore();
+        if (hasSurfaceView()) {
 
-        blurAndSave();
+            int rvw = surfaceView.getWidth();
+            int rvh = surfaceView.getHeight();
+
+
+            new Thread() {
+                @Override
+                public void run() {
+
+
+//                    Log.d(TAG, "updateBlur: rvw = " + rvw + ", rvh = " + rvh);
+
+                    Bitmap bitmap = Bitmap.createBitmap(rvw, rvh, Bitmap.Config.ARGB_8888);
+                    RectF destF = new RectF(0, 0, blurView.getWidth(), blurView.getHeight());
+                    boolean valid = surfaceView.getHolder().getSurface().isValid();
+
+                    if (!valid) {
+                        return;
+                    }
+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                        long time = System.currentTimeMillis();
+                        Log.d(TAG, "PixelCopy: start");
+                        PixelCopy.request(surfaceView, bitmap, new PixelCopy.OnPixelCopyFinishedListener() {
+                            @Override
+                            public void onPixelCopyFinished(int copyResult) {
+                                if (copyResult == PixelCopy.SUCCESS) {
+                                    looperStarted = false;
+
+                                    Log.d(TAG, "onPixelCopyFinished: end , cost = " + (System.currentTimeMillis() - time) + "ms");
+                                    internalCanvas.save();
+                                    setupInternalCanvasMatrix();
+//                                    internalCanvas.drawColor(Color.RED);
+                                    internalCanvas.drawBitmap(bitmap, 0, 0, paint);
+//                                    internalCanvas.drawText("HAHAHAHA", 0, 400, paint);
+                                    internalCanvas.restore();
+                                    blurAndSave();
+                                    postLock();
+
+                                    Log.d(TAG, "PixelCopy: end , success ");
+                                } else {
+                                    Log.e(TAG, "Failed to copyPixels: " + copyResult);
+                                }
+                            }
+                        }, new Handler(Looper.getMainLooper()));
+                    }
+                }
+            }.start();
+
+        } else {
+
+            Log.d(TAG, "updateBlur start");
+
+            internalCanvas.save();
+            setupInternalCanvasMatrix();
+            rootView.draw(internalCanvas);
+            internalCanvas.restore();
+
+            blurAndSave();
+
+            Log.d(TAG, "updateBlur end");
+
+        }
+
+    }
+
+
+    private long lockTime = 0;
+
+    private void postLock() {
+
+        lockTime = System.currentTimeMillis();
+        // 30ms调用一次
+
+        blurView.postInvalidate();
     }
 
     /**
@@ -163,9 +348,9 @@ public final class PreDrawBlurController implements BlurController {
         canvas.scale(scaleFactorW, scaleFactorH);
         blurAlgorithm.render(canvas, internalBitmap);
         canvas.restore();
-        if (overlayColor != TRANSPARENT) {
-            canvas.drawColor(overlayColor);
-        }
+//        if (overlayColor != TRANSPARENT) {
+//            canvas.drawColor(overlayColor);
+//        }
         return true;
     }
 
@@ -178,8 +363,12 @@ public final class PreDrawBlurController implements BlurController {
 
     @Override
     public void updateBlurViewSize() {
+
+
         int measuredWidth = blurView.getMeasuredWidth();
         int measuredHeight = blurView.getMeasuredHeight();
+
+        Log.d(TAG, "updateBlurViewSize: measuredWidth = " + measuredWidth + ", measuredHeight = " + measuredHeight);
 
         init(measuredWidth, measuredHeight);
     }

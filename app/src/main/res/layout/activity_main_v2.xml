@@ -7,8 +7,8 @@
     android:layout_height="match_parent"
     tools:context="com.eightbitlab.blurview_sample.MainActivity">
 
-    <androidx.viewpager.widget.ViewPager
-        android:id="@+id/viewPager"
+    <SurfaceView
+        android:id="@+id/v_surface"
         android:layout_width="match_parent"
         android:layout_height="400dp"
         android:layout_gravity="bottom" />
@@ -46,25 +46,18 @@
 
     <eightbitlab.com.blurview.BlurView
         android:id="@+id/bottomBlurView"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_width="400dp"
+        android:layout_height="200dp"
         android:layout_gravity="bottom"
         app:blurOverlayColor="@color/colorOverlay"
         tools:targetApi="lollipop">
 
         <com.google.android.material.tabs.TabLayout
             android:id="@+id/tabLayout"
-            android:layout_width="match_parent"
-            android:layout_height="@dimen/bottom_tab_height"
+            android:layout_width="400dp"
+            android:layout_height="200dp"
             android:background="@android:color/transparent" />
 
     </eightbitlab.com.blurview.BlurView>
-
-    <Button
-        android:id="@+id/btn_go_v2"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_vertical"
-        android:text="go v2" />
 
 </FrameLayout>

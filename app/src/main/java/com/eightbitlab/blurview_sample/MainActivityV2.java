@@ -1,11 +1,21 @@
 package com.eightbitlab.blurview_sample;
 
+import static java.lang.Thread.sleep;
+
+import android.content.Context;
+import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.graphics.Outline;
+import android.graphics.Paint;
+import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.ViewOutlineProvider;
 import android.widget.SeekBar;
 
@@ -14,7 +24,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentPagerAdapter;
-import androidx.viewpager.widget.ViewPager;
 
 import com.google.android.material.tabs.TabLayout;
 
@@ -23,26 +32,30 @@ import eightbitlab.com.blurview.BlurView;
 import eightbitlab.com.blurview.RenderEffectBlur;
 import eightbitlab.com.blurview.RenderScriptBlur;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivityV2 extends AppCompatActivity {
 
-    private ViewPager viewPager;
     private TabLayout tabLayout;
     private BlurView bottomBlurView;
     private BlurView topBlurView;
     private SeekBar radiusSeekBar;
-    private ViewGroup root;
+    private View root;
+    private SurfaceView surfaceView;
+
+    public static void start(Context context) {
+        Intent starter = new Intent(context, MainActivityV2.class);
+        context.startActivity(starter);
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_main_v2);
         initView();
         setupBlurView();
-        setupViewPager();
+        init();
     }
 
     private void initView() {
-        viewPager = findViewById(R.id.viewPager);
         tabLayout = findViewById(R.id.tabLayout);
         bottomBlurView = findViewById(R.id.bottomBlurView);
         topBlurView = findViewById(R.id.topBlurView);
@@ -58,20 +71,10 @@ public class MainActivity extends AppCompatActivity {
             });
         }
         radiusSeekBar = findViewById(R.id.radiusSeekBar);
-        root = findViewById(R.id.root);
 
-        findViewById(R.id.btn_go_v2).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                MainActivityV2.start(MainActivity.this);
-            }
-        });
-    }
+        surfaceView = findViewById(R.id.v_surface);
 
-    private void setupViewPager() {
-        viewPager.setOffscreenPageLimit(4);
-        viewPager.setAdapter(new ViewPagerAdapter(getSupportFragmentManager()));
-        tabLayout.setupWithViewPager(viewPager);
+        root = surfaceView;
     }
 
     private void setupBlurView() {
@@ -83,9 +86,9 @@ public class MainActivity extends AppCompatActivity {
         final Drawable windowBackground = getWindow().getDecorView().getBackground();
         BlurAlgorithm algorithm = getBlurAlgorithm();
 
-        topBlurView.setupWith(root, algorithm)
-                .setFrameClearDrawable(windowBackground)
-                .setBlurRadius(radius);
+//        topBlurView.setupWith(root, algorithm)
+//                .setFrameClearDrawable(windowBackground)
+//                .setBlurRadius(radius);
 
         bottomBlurView.setupWith(root, new RenderScriptBlur(this))
                 .setFrameClearDrawable(windowBackground)
@@ -175,5 +178,85 @@ public class MainActivity extends AppCompatActivity {
         }
 
         abstract Fragment getFragment();
+    }
+
+    private Bitmap[] bitmaps = new Bitmap[3];
+
+
+    public void init() {
+
+        Bitmap bitmap1 = BitmapFactory.decodeResource(getResources(), R.mipmap.t1);
+        Bitmap bitmap2 = BitmapFactory.decodeResource(getResources(), R.mipmap.t2);
+        Bitmap bitmap3 = BitmapFactory.decodeResource(getResources(), R.mipmap.t3);
+        bitmaps[0] = bitmap1;
+        bitmaps[1] = bitmap2;
+        bitmaps[2] = bitmap3;
+
+        startLoopDrawToSurfaceView();
+    }
+
+    boolean loopFlag = false;
+
+    public void startLoopDrawToSurfaceView() {
+
+        float screenWidth = getResources().getDisplayMetrics().widthPixels;
+//        int screenHeight = getResources().getDisplayMetrics().heightPixels;
+
+
+        int height = 800;
+
+        RectF f = new RectF(0, 0, screenWidth, height);
+
+        Paint paint = new Paint();
+        paint.setFilterBitmap(true);
+
+
+        loopFlag = true;
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (loopFlag) {
+                    for (int i = 0; i < bitmaps.length; i++) {
+                        final Bitmap bitmap = bitmaps[i];
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                SurfaceHolder holder = surfaceView.getHolder();
+                                boolean valid = holder.getSurface().isValid();
+                                if (!valid) {
+                                    return;
+                                }
+                                Canvas canvas = holder.lockCanvas();
+
+                                float width = bitmap.getWidth() * 1f;
+                                float height = bitmap.getHeight() * 1f;
+
+                                float scale = width / screenWidth;
+
+                                float nHeight = height / scale;
+
+                                f.set(0, 0, screenWidth, nHeight);
+
+                                if (canvas != null) {
+                                    canvas.drawBitmap(bitmap, null, f, paint);
+                                }
+                                holder.unlockCanvasAndPost(canvas);
+                            }
+                        });
+                        try {
+                            sleep(2000);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }
+        }).start();
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        loopFlag = false;
     }
 }
