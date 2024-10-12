@@ -224,13 +224,17 @@ public final class PreDrawBlurController implements BlurController {
             return;
         }
 
-        if (frameClearDrawable == null) {
-//            internalBitmap.eraseColor(Color.TRANSPARENT);
-        } else {
-//            frameClearDrawable.draw(internalCanvas);
+        boolean hasSurface = hasSurfaceView();
+
+        if (!hasSurface) {
+            if (frameClearDrawable == null) {
+                internalBitmap.eraseColor(Color.TRANSPARENT);
+            } else {
+                frameClearDrawable.draw(internalCanvas);
+            }
         }
 
-        if (hasSurfaceView()) {
+        if (hasSurface) {
 
             int rvw = surfaceView.getWidth();
             int rvh = surfaceView.getHeight();
