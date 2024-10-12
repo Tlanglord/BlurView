@@ -2,7 +2,7 @@
 
 <a href="url"><img src="https://user-images.githubusercontent.com/1433500/174389657-f52837db-005b-4a68-b9c6-ce196fa03395.jpg" width="432" ></a>
 
-https://raw.githubusercontent.com/Tlanglord/BlurView/refs/heads/master/Screen_recording_20241012_112839.mp4
+https://github.com/user-attachments/assets/eac4896f-c4cc-4190-9418-592aa27d567c
 
 Dynamic iOS-like blur for Android Views. Includes library and small example project.
 
