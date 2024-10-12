@@ -4,6 +4,11 @@
 
 [Watch Video](https://raw.githubusercontent.com/Tlanglord/BlurView/refs/heads/master/Screen_recording_20241012_112839.mp4)
 
+<video width="640" height="360" controls>
+  <source src="https://raw.githubusercontent.com/Tlanglord/BlurView/refs/heads/master/Screen_recording_20241012_112839.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
 Dynamic iOS-like blur for Android Views. Includes library and small example project.
 
 BlurView can be used as a regular FrameLayout. It blurs its underlying content and draws it as a
