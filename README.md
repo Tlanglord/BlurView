@@ -2,12 +2,7 @@
 
 <a href="url"><img src="https://user-images.githubusercontent.com/1433500/174389657-f52837db-005b-4a68-b9c6-ce196fa03395.jpg" width="432" ></a>
 
-[Watch Video](https://raw.githubusercontent.com/Tlanglord/BlurView/refs/heads/master/Screen_recording_20241012_112839.mp4)
-
-<video width="640" height="360" controls>
-  <source src="https://raw.githubusercontent.com/Tlanglord/BlurView/refs/heads/master/Screen_recording_20241012_112839.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
+https://raw.githubusercontent.com/Tlanglord/BlurView/refs/heads/master/Screen_recording_20241012_112839.mp4
 
 Dynamic iOS-like blur for Android Views. Includes library and small example project.
 
