@@ -11,7 +11,7 @@
         android:id="@+id/v_surface"
         android:layout_width="match_parent"
         android:layout_height="400dp"
-        android:layout_gravity="bottom" />
+        android:layout_gravity="center" />
 
     <eightbitlab.com.blurview.BlurView
         android:id="@+id/topBlurView"
@@ -49,7 +49,7 @@
         android:id="@+id/bottomBlurView"
         android:layout_width="400dp"
         android:layout_height="200dp"
-        android:layout_gravity="bottom"
+        android:layout_gravity="center"
         app:blurOverlayColor="@color/colorOverlay"
         tools:targetApi="lollipop">
 
