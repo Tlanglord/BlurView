@@ -65,6 +65,6 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_vertical"
-        android:text="go v2" />
+        android:text="Go SurfaceView Blur" />
 
 </FrameLayout>
