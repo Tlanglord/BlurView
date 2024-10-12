@@ -156,12 +156,6 @@ public class MainActivity extends AppCompatActivity {
             Fragment getFragment() {
                 return new ImageFragment();
             }
-        },
-        FOUR("SURFACE") {
-            @Override
-            Fragment getFragment() {
-                return new SurfaceViewFragment();
-            }
         };
 
         private String title;
