@@ -239,6 +239,7 @@ public final class PreDrawBlurController implements BlurController {
             int rvw = surfaceView.getWidth();
             int rvh = surfaceView.getHeight();
 
+            Handler handlerPixelCopy = new Handler();
 
             new Thread() {
                 @Override
@@ -274,12 +275,12 @@ public final class PreDrawBlurController implements BlurController {
                                     blurAndSave();
                                     postLock();
 
-                                    Log.d(TAG, "PixelCopy: end , success ");
+                                    Log.d(TAG, "PixelCopy: end , success , cost=" + (System.currentTimeMillis() - time) + "ms");
                                 } else {
                                     Log.e(TAG, "Failed to copyPixels: " + copyResult);
                                 }
                             }
-                        }, new Handler(Looper.getMainLooper()));
+                        }, handlerPixelCopy);
                     }
                 }
             }.start();
@@ -359,10 +360,12 @@ public final class PreDrawBlurController implements BlurController {
     }
 
     private void blurAndSave() {
+        long time = System.currentTimeMillis();
         internalBitmap = blurAlgorithm.blur(internalBitmap, blurRadius);
         if (!blurAlgorithm.canModifyBitmap()) {
             internalCanvas.setBitmap(internalBitmap);
         }
+        Log.d(TAG, "blurAndSave: cost = " + (System.currentTimeMillis() - time) + "ms");
     }
 
     @Override
